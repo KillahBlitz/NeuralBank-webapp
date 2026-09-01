@@ -1,0 +1,75 @@
+name: Build & Deploy NeuralBank Webapp
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  # ─────────────────────────────────────────
+  # FASE 1 — Build de la imagen
+  # ─────────────────────────────────────────
+  build:
+    name: Build image
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    outputs:
+      image: ${{ steps.vars.outputs.image }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Calcular nombre de imagen
+        id: vars
+        run: |
+          echo "image=ghcr.io/killahblitz/neuralbank-webapp" >> $GITHUB_OUTPUT
+
+      - name: Login to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build & Push
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: Dockerfile
+          push: true
+          build-args: |
+            VITE_API_URL=${{ secrets.VITE_API_URL }}
+          tags: |
+            ${{ steps.vars.outputs.image }}:latest
+            ${{ steps.vars.outputs.image }}:${{ github.sha }}
+
+  # ─────────────────────────────────────────
+  # FASE 2 — Deploy
+  # ─────────────────────────────────────────
+  deploy:
+    name: Deploy neuralbank-webapp
+    needs: build
+    runs-on: self-hosted
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Actualizar tag de imagen en manifest
+        run: |
+          sed -i "s|image:.*neuralbank-webapp:.*|image: ${{ needs.build.outputs.image }}:latest|" \
+            kubernetes/deployment.yaml
+
+      - name: Apply manifest
+        run: |
+          kubectl apply -f kubernetes/deployment.yaml
+
+      - name: Forzar redeploy con imagen nueva
+        run: |
+          kubectl rollout restart deployment/neuralbank-webapp
+
+      - name: Esperar rollout
+        run: |
+          kubectl rollout status deployment/neuralbank-webapp --timeout=120s

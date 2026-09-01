@@ -1,0 +1,43 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: neuralbank-webapp
+  labels:
+    app: neuralbank-webapp
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: neuralbank-webapp
+  template:
+    metadata:
+      labels:
+        app: neuralbank-webapp
+    spec:
+      imagePullSecrets:
+        - name: ghcr-secret
+      containers:
+        - name: neuralbank-webapp
+          image: ghcr.io/killahblitz/neuralbank-webapp:latest
+          ports:
+            - containerPort: 3005
+          env:
+            - name: HOST
+              value: "0.0.0.0"
+            - name: PORT
+              value: "3005"
+            - name: NITRO_PORT
+              value: "3005"
+          imagePullPolicy: Always
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: neuralbank-webapp
+spec:
+  selector:
+    app: neuralbank-webapp
+  ports:
+    - port: 80
+      targetPort: 3005
+  type: NodePort
