@@ -12,6 +12,9 @@ const router = useRouter()
       <button class="nav-btn" @click="router.push('/DataPage')">
         Documentos
       </button>
+      <button class="nav-btn">
+        Reporte de Conciliacion
+      </button>
     </nav>
   </aside>
 </template>
@@ -55,7 +58,7 @@ const router = useRouter()
   border: none;
   border-radius: 5px;
   padding: 14px 0;
-  font-size: 18px;
+  font-size: 14px;
   font-weight: 500;
   color: #ffffff;
   text-align: center;
