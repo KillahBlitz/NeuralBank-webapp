@@ -11,14 +11,12 @@ const files = ref([])
 const statusIcons = ref({})
 const loading = ref(false)
 
-// Detail panel state
 const expandedUuid = ref(null)
 const currentPage = ref(null)
 const currentPageNumber = ref(1)
 const totalPages = ref(0)
 const detailLoading = ref(false)
 
-// Fullscreen image modal state
 const imageModalEl = ref(null)
 let imageModal = null
 
@@ -79,7 +77,6 @@ async function onChevronClick(uuid) {
     totalPages.value = 0
     return
   }
-
   expandedUuid.value = uuid
   await loadPage(uuid, 1)
 }
@@ -107,7 +104,6 @@ onMounted(async () => {
   statusIcons.value = await res.json()
   fetchDocuments()
 
-  // Initialize Bootstrap Modal
   if (imageModalEl.value) {
     const bootstrap = await import('bootstrap')
     imageModal = new bootstrap.Modal(imageModalEl.value)
@@ -118,65 +114,43 @@ defineExpose({ reload })
 </script>
 
 <template>
-  <div class="documents-container">
-    <!-- Loading spinner -->
+  <div class="mt-3">
     <div v-if="loading" class="d-flex justify-content-center align-items-center py-5">
       <div class="spinner-border text-primary" role="status">
         <span class="visually-hidden">Cargando...</span>
       </div>
     </div>
 
-    <!-- Empty state -->
     <div v-else-if="files.length === 0" class="text-center text-secondary py-5">
       <p class="fs-6">No hay documentos en el rango seleccionado.</p>
     </div>
 
-    <!-- Document rows -->
-    <div v-else class="documents-list">
-      <!-- Column header row -->
-      <div class="header-row d-flex align-items-center gap-3">
-        <!-- Empty space for PDF icon column -->
-        <span class="doc-icon-placeholder"></span>
-
-        <!-- Column headers -->
-        <span class="header-cell flex-grow-1">Nombre de archivo</span>
-        <span class="header-cell header-date">Fecha de carga</span>
-        <span class="header-cell header-status">Estatus</span>
-        <span class="header-cell header-size">Peso</span>
-        <span class="header-cell header-pages">P&aacute;ginas</span>
-
-        <!-- Empty space for chevron column -->
-        <span class="chevron-placeholder"></span>
+    <div v-else class="documents-list d-flex flex-column gap-2">
+      <div class="header-row d-flex align-items-center gap-3 px-3 py-2">
+        <span class="header-icon-space flex-shrink-0"></span>
+        <span class="flex-grow-1 text-truncate">Nombre de archivo</span>
+        <span class="flex-shrink-0">Fecha de carga</span>
+        <span class="header-status flex-shrink-0 text-center">Estatus</span>
+        <span class="header-size flex-shrink-0 text-end">Peso</span>
+        <span class="header-pages flex-shrink-0 text-end">Páginas</span>
+        <span class="header-chevron-space flex-shrink-0"></span>
       </div>
 
       <div v-for="file in files" :key="file.uuid">
-        <div class="document-row d-flex align-items-center gap-3">
-          <!-- 1. PDF icon -->
-          <img src="/icons/pdfIcon.png" alt="PDF" class="doc-icon" />
-
-          <!-- 2. File name -->
-          <span class="doc-name flex-grow-1">{{ file.file_name }}</span>
-
-          <!-- 3. Upload date -->
-          <span class="doc-date">{{ formatDate(file.upload_at) }}</span>
-
-          <!-- 4. Status icon -->
+        <div class="document-row d-flex align-items-center gap-3 px-3 py-3 rounded-3 border">
+          <img src="/icons/pdfIcon.png" alt="PDF" class="doc-icon flex-shrink-0" />
+          <span class="flex-grow-1 fw-medium text-truncate" style="min-width: 0">{{ file.file_name }}</span>
+          <span class="flex-shrink-0 text-secondary">{{ formatDate(file.upload_at) }}</span>
           <img
             v-if="getStatusIcon(file.status)"
             :src="getStatusIcon(file.status)"
             :alt="file.status"
-            class="status-icon"
+            class="status-icon flex-shrink-0"
           />
-
-          <!-- 5. File size -->
-          <span class="doc-size">{{ formatSize(file.file_size) }}</span>
-
-          <!-- 6. Pages -->
-          <span class="doc-pages">{{ file.pages }} p&aacute;gs</span>
-
-          <!-- 7. Chevron-down -->
+          <span class="doc-size flex-shrink-0 text-end">{{ formatSize(file.file_size) }}</span>
+          <span class="doc-pages flex-shrink-0 text-end">{{ file.pages }} págs</span>
           <button
-            class="chevron-btn"
+            class="chevron-btn flex-shrink-0 btn btn-sm p-1 border-0"
             :class="{ 'chevron-expanded': expandedUuid === file.uuid }"
             @click="onChevronClick(file.uuid)"
             aria-label="Expandir"
@@ -187,88 +161,70 @@ defineExpose({ reload })
           </button>
         </div>
 
-        <!-- Detail panel -->
-        <div v-if="expandedUuid === file.uuid" class="detail-panel">
-          <!-- Loading state -->
-          <div v-if="detailLoading" class="d-flex justify-content-center align-items-center py-4">
+        <div v-if="expandedUuid === file.uuid" class="detail-panel d-flex rounded-3 border mt-2 p-3">
+          <div v-if="detailLoading" class="detail-loading-left d-flex justify-content-center align-items-center flex-shrink-0">
             <div class="spinner-border text-primary" role="status">
               <span class="visually-hidden">Cargando detalle...</span>
             </div>
           </div>
 
-          <!-- Empty state -->
-          <div v-else-if="!currentPage" class="text-center text-secondary py-4">
+          <div v-else-if="!currentPage" class="w-100 text-center text-secondary py-4">
             <p class="mb-0">No se encontraron páginas para este documento.</p>
           </div>
 
-          <!-- Page content -->
-          <div v-else class="detail-content d-flex">
-            <!-- LEFT: Image column -->
-            <div class="detail-image-col">
+          <template v-else>
+            <div class="detail-image-col d-flex flex-column align-items-center flex-shrink-0">
               <img
                 v-if="currentPage"
                 :src="'data:image/png;base64,' + currentPage.file_bytes"
-                alt="P&aacute;gina del documento"
-                class="detail-page-image"
+                alt="Página del documento"
+                class="detail-page-image rounded shadow-sm"
                 @click="openImageModal"
               />
-              <p v-if="currentPage" class="detail-page-label">
-                P&aacute;gina {{ currentPage.page }}
+              <p v-if="currentPage" class="mt-2 mb-1 fw-medium small text-center">
+                Página {{ currentPage.page }}
               </p>
-
-              <!-- Navigation arrows (only if more than 1 page) -->
-              <div v-if="totalPages > 1" class="detail-nav d-flex align-items-center justify-content-center gap-2">
+              <div v-if="totalPages > 1" class="d-flex align-items-center justify-content-center gap-2 mt-1">
                 <button
-                  class="detail-nav-btn"
+                  class="btn btn-outline-primary btn-sm detail-nav-btn d-flex align-items-center justify-content-center"
                   :disabled="currentPageNumber <= 1 || detailLoading"
                   @click.stop="prevPage()"
-                  aria-label="Página anterior"
-                >
-                  &#8249;
-                </button>
-                <span class="detail-nav-info">
-                  Página {{ currentPageNumber }} de {{ totalPages }}
-                </span>
+                >&#8249;</button>
+                <span class="small text-nowrap">Página {{ currentPageNumber }} de {{ totalPages }}</span>
                 <button
-                  class="detail-nav-btn"
+                  class="btn btn-outline-primary btn-sm detail-nav-btn d-flex align-items-center justify-content-center"
                   :disabled="currentPageNumber >= totalPages || detailLoading"
                   @click.stop="nextPage()"
-                  aria-label="Página siguiente"
-                >
-                  &#8250;
-                </button>
+                >&#8250;</button>
               </div>
             </div>
 
-            <!-- RIGHT: Extraction text column -->
-            <div class="detail-text-col">
+            <div class="flex-grow-1 ps-3" style="min-width: 0">
               <div v-if="currentPage" class="detail-extraction-text">
                 {{ currentPage.extraction }}
               </div>
             </div>
-          </div>
+          </template>
         </div>
       </div>
     </div>
 
-    <!-- Fullscreen image modal (Bootstrap Modal) -->
     <div
       ref="imageModalEl"
       class="modal fade"
       tabindex="-1"
-      aria-label="Imagen a pantalla completa"
       aria-hidden="true"
     >
       <div class="modal-dialog modal-dialog-centered modal-xl">
-        <div class="modal-content image-modal-content">
-          <div class="modal-header image-modal-header">
-            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+        <div class="modal-content bg-black border-0">
+          <div class="modal-header border-0 bg-transparent p-2">
+            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Cerrar"></button>
           </div>
           <div class="modal-body d-flex justify-content-center align-items-center">
             <img
               v-if="currentPage"
               :src="'data:image/png;base64,' + currentPage.file_bytes"
-              alt="Imagen de p&aacute;gina completa"
+              alt="Imagen completa"
               class="image-modal-img"
             />
           </div>
@@ -279,21 +235,12 @@ defineExpose({ reload })
 </template>
 
 <style scoped>
-.documents-container {
-  margin-top: 16px;
-}
-
 .documents-list {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
   max-height: calc(100vh - 260px);
   overflow-y: auto;
 }
 
-/* Column header row */
 .header-row {
-  padding: 10px 20px;
   font-size: 13px;
   font-weight: 600;
   color: var(--color-blue-dark);
@@ -301,195 +248,52 @@ defineExpose({ reload })
   border-bottom: 1px solid var(--color-gray);
 }
 
-.doc-icon-placeholder {
-  width: 32px;
-  flex-shrink: 0;
-}
+.header-icon-space { width: 32px; }
+.header-status { min-width: 80px; }
+.header-size { min-width: 70px; }
+.header-pages { min-width: 60px; }
+.header-chevron-space { width: 28px; }
 
-.header-cell {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.header-date {
-  flex-shrink: 0;
-}
-
-.header-status {
-  min-width: 80px;
-  flex-shrink: 0;
-  text-align: center;
-}
-
-.header-size {
-  flex-shrink: 0;
-  min-width: 70px;
-  text-align: right;
-}
-
-.header-pages {
-  flex-shrink: 0;
-  min-width: 60px;
-  text-align: right;
-}
-
-.chevron-placeholder {
-  width: 28px;
-  flex-shrink: 0;
-}
-
-/* Data rows */
 .document-row {
   min-height: 72px;
-  padding: 16px 20px;
   background: var(--color-white);
-  border: 1px solid var(--color-gray);
-  border-radius: 8px;
+  border-color: var(--color-gray) !important;
   font-size: 16px;
   color: var(--color-blue-dark);
 }
 
-.doc-icon {
-  width: 32px;
-  height: 32px;
-  object-fit: contain;
-  flex-shrink: 0;
-}
-
-.doc-name {
-  font-weight: 500;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  min-width: 0;
-}
-
-.doc-date {
-  flex-shrink: 0;
-  color: #555;
-}
-
-.status-icon {
-  width: 32px;
-  height: 32px;
-  object-fit: contain;
-  flex-shrink: 0;
-  min-width: 80px;
-}
-
-.doc-size {
-  flex-shrink: 0;
-  min-width: 70px;
-  text-align: right;
-}
-
-.doc-pages {
-  flex-shrink: 0;
-  min-width: 60px;
-  text-align: right;
-}
+.doc-icon { width: 32px; height: 32px; object-fit: contain; }
+.status-icon { width: 32px; height: 32px; object-fit: contain; min-width: 80px; }
+.doc-size { min-width: 70px; }
+.doc-pages { min-width: 60px; }
 
 .chevron-btn {
-  background: none;
-  border: none;
-  cursor: pointer;
-  padding: 4px;
   color: var(--color-blue-dark);
-  flex-shrink: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
   transition: opacity 0.15s, transform 0.3s ease;
 }
+.chevron-btn:hover { opacity: 0.7; }
+.chevron-btn.chevron-expanded { transform: rotate(180deg); }
 
-.chevron-btn:hover {
-  opacity: 0.7;
-}
-
-.chevron-btn.chevron-expanded {
-  transform: rotate(180deg);
-}
-
-/* Detail panel */
 .detail-panel {
   background: rgba(104, 204, 231, 0.5);
-  border: 1px solid var(--color-gray);
-  border-radius: 8px;
-  padding: 16px;
-  margin-top: 8px;
+  border-color: var(--color-gray) !important;
 }
 
-.detail-content {
-  gap: 0;
+.detail-loading-left {
+  width: 35%;
+  min-height: 320px;
 }
 
-.detail-image-col {
-  flex-shrink: 0;
-  max-width: 35%;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-}
+.detail-image-col { max-width: 35%; }
 
 .detail-page-image {
   width: 100%;
   max-height: 320px;
   object-fit: contain;
-  border-radius: 6px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
   cursor: pointer;
 }
 
-.detail-page-label {
-  margin-top: 8px;
-  font-size: 14px;
-  font-weight: 500;
-  color: var(--color-blue-dark);
-  text-align: center;
-}
-
-.detail-nav {
-  margin-top: 8px;
-}
-
-.detail-nav-btn {
-  background: none;
-  border: 1px solid var(--color-blue-dark);
-  color: var(--color-blue-dark);
-  border-radius: 4px;
-  width: 32px;
-  height: 32px;
-  font-size: 16px;
-  font-weight: 600;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: opacity 0.15s;
-}
-
-.detail-nav-btn:disabled {
-  opacity: 0.4;
-  cursor: not-allowed;
-}
-
-.detail-nav-btn:not(:disabled):hover {
-  background: var(--color-blue-dark);
-  color: var(--color-white);
-}
-
-.detail-nav-info {
-  font-size: 13px;
-  color: var(--color-blue-dark);
-  white-space: nowrap;
-}
-
-.detail-text-col {
-  flex-grow: 1;
-  padding-left: 20px;
-  min-width: 0;
-}
+.detail-nav-btn { width: 32px; height: 32px; font-weight: 600; }
 
 .detail-extraction-text {
   font-size: 14px;
@@ -498,22 +302,6 @@ defineExpose({ reload })
   white-space: pre-line;
   overflow-y: auto;
   max-height: 320px;
-}
-
-/* Fullscreen image modal */
-.image-modal-content {
-  background: #000;
-  border: none;
-}
-
-.image-modal-header {
-  border-bottom: none;
-  padding: 8px 12px;
-  background: transparent;
-}
-
-.image-modal-header .btn-close {
-  filter: invert(1);
 }
 
 .image-modal-img {
