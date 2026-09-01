@@ -5,5 +5,12 @@ export default defineNuxtConfig({
   css: [
     'bootstrap/dist/css/bootstrap.min.css',
     '~/assets/css/global.css',
-  ]
+  ],
+  app: {
+    head: {
+      link: [
+        { rel: 'icon', type: 'image/jpeg', href: '/icons/banamex_logo.jpeg' },
+      ],
+    },
+  },
 })
